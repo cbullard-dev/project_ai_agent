@@ -1,0 +1,8 @@
+from google.genai import types
+from functions.get_file_content import schema_get_file_content
+from functions.get_files_info import schema_get_files_info
+from functions.write_file_content import schema_write_file_content
+# Not sure if I'll add this into the project yet schema not yet created
+# from functions.run_python_file import schema_run_python_file
+
+AVAILABLE_FUNCTIONS = types.Tool(function_declarations=[schema_get_files_info,schema_get_file_content,schema_write_file_content])
