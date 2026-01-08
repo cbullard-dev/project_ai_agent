@@ -3,6 +3,7 @@ import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from prompts.prompts import SYSTEM_PROMPT
 
 def main():
     parser = argparse.ArgumentParser(description="AI Chatbot")
@@ -17,7 +18,7 @@ def main():
     api_key = os.environ.get("GEMINI_API_KEY")
 
     client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(model= AI_MODEL,contents=messages)
+    response = client.models.generate_content(model= AI_MODEL,contents=messages,config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT))
     usage_metadata = response.usage_metadata
     if usage_metadata == None:
         raise Exception("response metadata not present")
