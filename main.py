@@ -1,10 +1,13 @@
 import os
+import sys
 import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from prompts.prompts import SYSTEM_PROMPT
 from config.call_function_config import AVAILABLE_FUNCTIONS
+from config.config import MAX_ITERATIONS
+from functions.call_function import call_function
 
 def main():
     parser = argparse.ArgumentParser(description="AI Chatbot")
@@ -18,49 +21,71 @@ def main():
     load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY")
 
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model=AI_MODEL,
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[AVAILABLE_FUNCTIONS]
-            ,system_instruction=SYSTEM_PROMPT
+    for _ in range(MAX_ITERATIONS):  
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=AI_MODEL,
+            contents=messages,
+            config=types.GenerateContentConfig(
+                tools=[AVAILABLE_FUNCTIONS]
+                ,system_instruction=SYSTEM_PROMPT
+                )
             )
+        if response.candidates:
+            for candidate in response.candidates:
+                if candidate.content != None:
+                    messages.append(candidate.content)
+        usage_metadata = response.usage_metadata
+        function_calls = response.function_calls
+        if not function_calls:
+            if usage_metadata == None:
+                raise Exception("response metadata not present")
+            response_text = response.text or ""
+            prompt_tokens = usage_metadata.prompt_token_count
+            response_tokens = usage_metadata.candidates_token_count
+            verbose_print_format = f"""
+                User prompt: {prompt_data}
+                Prompt tokens: {prompt_tokens}
+                Response tokens: {response_tokens}
+            """
+
+            standard_format = f"""
+            Final response:
+            {response_text}
+            """
+
+            print_list = list()
+            print_list.append("\n\n")
+
+            if args.verbose:
+                print_list.append(verbose_print_format)
+            if response_text:
+                print_list.append(standard_format)
+            print_format = '\n'.join(print_list)
+
+            print(print_format)
+            return
+
+        function_calls_results = list()
+        function_strings = list()
+        if function_calls:
+            for function_call in function_calls:
+                function_calls_results.append(call_function(function_call=function_call,verbose=args.verbose))
+        if function_calls_results:
+            for function_call in function_calls_results:
+                if not function_call.parts:
+                    raise Exception(f"No 'parts' found in function call responses")
+                if function_call.parts[0].function_response == None:
+                    raise Exception(f"Function response is None")
+                if function_call.parts[0].function_response.response == None:
+                    raise Exception(f"Function response is None")
+                function_strings.append(f"-> {function_call.parts[0].function_response.response}")
+        
+        messages.append(
+            types.Content(role="user", parts=[function_call.parts[0] for function_call in function_calls_results])
         )
-    usage_metadata = response.usage_metadata
-    function_calls = response.function_calls
-    function_strings = list()
-    if function_calls:
-        for function_call in function_calls:
-            function_strings.append(f"Calling function: {function_call.name}({function_call.args})")
-    if usage_metadata == None:
-        raise Exception("response metadata not present")
-    response_text = response.text
-    prompt_tokens = usage_metadata.prompt_token_count
-    response_tokens = usage_metadata.candidates_token_count
-    verbose_print_format = f"""
-        User prompt: {prompt_data}
-        Prompt tokens: {prompt_tokens}
-        Response tokens: {response_tokens}
-    """
-
-    standard_format = f"""
-    Response:
-    {response_text}
-    """
-
-    print_list = list()
-
-    if args.verbose:
-        print_list.append(verbose_print_format)
-    if response_text:
-        print_list.append(standard_format)
-    if function_strings:
-        for function_string in function_strings:
-            print_list.append(function_string)
-    print_format = '\n'.join(print_list)
-
-    print(print_format)
+    print(f"Maximum iterations ({MAX_ITERATIONS}) reached")
+    sys.exit(1)
 
 
 if __name__ == "__main__":
