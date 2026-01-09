@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from prompts.prompts import SYSTEM_PROMPT
-from config.call_function import AVAILABLE_FUNCTIONS
+from config.call_function_config import AVAILABLE_FUNCTIONS
 
 def main():
     parser = argparse.ArgumentParser(description="AI Chatbot")
