@@ -6,6 +6,7 @@ schema_write_file_content = types.FunctionDeclaration(
   description="Write content to a file, if the file or the directory path for the file doesn't yet exist create it in the process",
   parameters=types.Schema(
     type=types.Type.OBJECT,
+    required=["file_path","content"],
     properties={
       "file_path":types.Schema(
         type=types.Type.STRING,

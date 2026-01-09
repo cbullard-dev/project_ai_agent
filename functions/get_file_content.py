@@ -7,6 +7,7 @@ schema_get_file_content = types.FunctionDeclaration(
   description=f"Gets the content of a specified file, if the file is greater than {MAX_FILE_CHARS} the file will be truncated",
   parameters=types.Schema(
     type=types.Type.OBJECT,
+    required=["file_path"],
     properties={
       "file_path": types.Schema(
         type=types.Type.STRING,
